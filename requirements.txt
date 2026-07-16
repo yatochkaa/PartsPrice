@@ -12,6 +12,9 @@ pytest>=8.2
 pytest-asyncio>=0.23
 httpx>=0.27
 aioresponses>=0.7
+<<<<<<< HEAD
 aiosqlite>=0.19
 alembic>=1.13
 pydantic-settings>=2.0
+=======
+>>>>>>> 08d8de0f238554a50b3b8963ed1e8c6a0f0f996d
