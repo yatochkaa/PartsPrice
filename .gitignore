@@ -1,0 +1,39 @@
+# Виртуальные окружения
+venv/
+.venv/
+env/
+
+# Секреты и локальная конфигурация
+.env
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Базы данных SQLite
+*.db
+*.db-journal
+*.sqlite3
+
+# Логи
+logs/
+*.log
+
+# Кэши инструментов
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Сборка и дистрибутивы
+build/
+dist/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+
+# ОС
+.DS_Store
+Thumbs.db
