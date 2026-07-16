@@ -1,4 +1,8 @@
-"""Роутер управления поставщиками и маппингом колонок их прайсов."""
+"""Роутер управления поставщиками и маппингом колонок их прайсов.
+
+Весь роутер требует роли admin: управление поставщиками — админская операция.
+Зависимость require_admin навешена на весь APIRouter через dependencies=[...].
+"""
 from __future__ import annotations
 
 import logging
@@ -8,13 +12,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.deps import require_admin
 from app.api.schemas import MappingCreate, SupplierCreate, SupplierOut
 from app.db.models import ColumnMapping, Supplier
 from app.db.session import get_session
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/suppliers", tags=["suppliers"])
+# dependencies=[Depends(require_admin)] — авторизация проверяется для всех ручек роутера.
+router = APIRouter(
+    prefix="/suppliers",
+    tags=["suppliers"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 @router.post("", response_model=SupplierOut, status_code=status.HTTP_201_CREATED)
@@ -33,14 +43,12 @@ async def create_supplier(
     try:
         await session.commit()
     except Exception:
-        # rollback возвращает сессию в рабочее состояние; подробности — в лог.
         await session.rollback()
         logger.exception("Не удалось создать поставщика %r", payload.name)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось создать поставщика",
         )
-    # refresh гарантирует, что id и серверные дефолты заполнены из БД.
     await session.refresh(supplier)
     logger.info("Создан поставщик id=%s name=%r", supplier.id, supplier.name)
     return supplier
@@ -61,11 +69,7 @@ async def set_supplier_mapping(
     payload: MappingCreate,
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, int | str]:
-    """Задаёт маппинг колонок прайса поставщика.
-
-    Повторный вызов ОБНОВЛЯЕТ существующий маппинг, а не создаёт дубль:
-    у поставщика ровно один актуальный маппинг (uselist=False в модели).
-    """
+    """Задаёт маппинг колонок прайса поставщика (повторный вызов — обновление, не дубль)."""
     # selectinload обязателен: ленивая подгрузка column_mapping в async-контексте упадёт.
     result = await session.execute(
         select(Supplier)
