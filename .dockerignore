@@ -1,0 +1,28 @@
+# .dockerignore — что НЕ копировать в образ при COPY.
+# Меньше лишнего в контексте сборки = быстрее сборка и меньше образ.
+
+# Секреты: .env передаётся контейнерам через env_file в compose, а не через образ.
+.env
+
+# Служебное git
+.git
+.gitignore
+
+# Кэши Python и виртуальные окружения
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Локальная база SQLite и логи — им в образе делать нечего (живут в томах)
+*.db
+*.db-journal
+logs/
+
+# Тесты и Docker-файлы в образ не нужны
+tests/
+Dockerfile
+docker-compose*.yml
+.dockerignore
+README*.md

@@ -1,0 +1,61 @@
+# docker-compose.yml — запуск PartsPrice Hub на SQLite (вариант по умолчанию).
+#
+# Два сервиса из ОДНОГО образа (partsprice-hub), различаются только command:
+#   api — миграции alembic, затем REST API (uvicorn);
+#   bot — Telegram-бот (long polling, порты наружу не нужны).
+# Файл SQLite и логи лежат в именованных томах — переживают пересоздание контейнеров.
+
+services:
+  api:
+    # Образ собирается один раз здесь; bot переиспользует его по имени image.
+    build: .
+    image: partsprice-hub:latest
+    # Автоперезапуск при падении/перезагрузке (кроме ручного docker compose stop).
+    restart: unless-stopped
+    # Секреты (BOT_TOKEN, API_SECRET, ADMIN_TELEGRAM_ID...) берём из .env
+    # в корне проекта; в сам образ .env не попадает (см. .dockerignore).
+    env_file: .env
+    environment:
+      # Перекрываем DATABASE_URL из .env: внутри контейнера база должна лежать
+      # в /app/data (это том), иначе файл БД исчезнет при пересоздании контейнера.
+      # 4 слэша = абсолютный путь внутри контейнера.
+      DATABASE_URL: sqlite+aiosqlite:////app/data/partsprice.db
+    # Сначала миграции, затем API; sh -c связывает две команды через &&.
+    command: sh -c "alembic upgrade head && uvicorn app.api.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      # Наружу: http://localhost:8000 (Swagger — /docs).
+      - "8000:8000"
+    volumes:
+      - partsprice-data:/app/data   # файл SQLite
+      - partsprice-logs:/app/logs   # logs/app.log с ротацией
+    healthcheck:
+      # curl в python:slim не установлен, поэтому проверяем стандартной библиотекой Python.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s      # как часто проверять
+      timeout: 5s        # сколько ждать ответ
+      retries: 5         # после скольких неудач контейнер считается unhealthy
+      start_period: 15s  # фора на старт: миграции при первом запуске занимают время
+
+  bot:
+    # Свой build не нужен: берём образ, собранный сервисом api.
+    image: partsprice-hub:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////app/data/partsprice.db
+    command: python -m app.bot.main
+    depends_on:
+      api:
+        # Ждём ЗДОРОВОГО API: к этому моменту alembic-миграции уже применены,
+        # и бот гарантированно не начнёт работать с пустой или старой схемой.
+        condition: service_healthy
+    volumes:
+      # Те же тома, что у api: одна база и общая папка логов на оба процесса.
+      - partsprice-data:/app/data
+      - partsprice-logs:/app/logs
+
+volumes:
+  # Именованные тома: данные живут отдельно от контейнеров
+  # и удаляются только явной командой docker compose down -v.
+  partsprice-data:
+  partsprice-logs:

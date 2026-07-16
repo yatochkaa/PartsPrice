@@ -1,0 +1,45 @@
+# docker-compose.postgres.yml — НАКЛАДКА (override) поверх docker-compose.yml.
+# Отдельно этот файл не запускается, только вторым -f:
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
+#
+# Добавляет сервис db (PostgreSQL 16) и переключает api/bot на него,
+# переопределяя DATABASE_URL. Код приложения менять не нужно:
+# и session.py, и alembic берут URL из настроек.
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      # Учётные данные локального контейнера БД. Порт наружу не публикуем —
+      # база доступна только другим сервисам внутри сети compose.
+      POSTGRES_USER: partsprice
+      POSTGRES_PASSWORD: partsprice
+      POSTGRES_DB: partsprice
+    volumes:
+      # Данные PostgreSQL — в отдельном именованном томе.
+      - partsprice-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready — штатная утилита PostgreSQL «готова ли база принимать подключения».
+      test: ["CMD-SHELL", "pg_isready -U partsprice -d partsprice"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    environment:
+      # Хост «db» — это имя сервиса выше: внутри сети compose оно работает как DNS-имя.
+      # asyncpg — асинхронный драйвер PostgreSQL (добавлен в requirements.txt).
+      DATABASE_URL: postgresql+asyncpg://partsprice:partsprice@db:5432/partsprice
+    depends_on:
+      db:
+        # Миграции alembic стартуют только после готовности PostgreSQL.
+        condition: service_healthy
+
+  bot:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://partsprice:partsprice@db:5432/partsprice
+    # depends_on на здоровый api наследуется из базового docker-compose.yml.
+
+volumes:
+  partsprice-pgdata:
