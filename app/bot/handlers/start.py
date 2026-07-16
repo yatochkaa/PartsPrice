@@ -1,9 +1,9 @@
 """Хендлер команды /start.
 
 Логика зависит от роли (её кладёт UserRoleMiddleware в data["user"]):
-- незнакомый (user is None)  -> кнопка «Запросить доступ»;
-- pending                    -> сообщение, что заявка на рассмотрении;
-- manager / admin            -> приветствие со списком команд по роли.
+- незнакомый (user is None) -> кнопка «Запросить доступ»;
+- pending -> сообщение, что заявка на рассмотрении;
+- manager / admin -> приветствие со списком команд по роли.
 """
 from __future__ import annotations
 
@@ -18,11 +18,16 @@ router = Router(name="start")
 
 # Списки команд по ролям — показываем в приветствии.
 _MANAGER_COMMANDS = (
-    "/search  — поиск запчасти по OEM или названию (будет добавлен)"
+    "🔎 Просто пришлите номер детали (OEM) или слово из названия — я найду цены.\n"
+    "Примеры: <code>W712/75</code> или <code>фильтр</code>"
 )
 _ADMIN_COMMANDS = (
-    "/pending — список заявок на доступ\n"
-    "/search  — поиск запчасти (будет добавлен)"
+    "🔎 Просто пришлите номер детали (OEM) или слово из названия — поиск цен\n"
+    "/upload — загрузить прайс-лист (.csv/.xlsx)\n"
+    "/suppliers — поставщики: список, добавление и настройка\n"
+    "/report — сводка по базе\n"
+    "/pending — заявки на доступ\n"
+    "/cancel — отменить текущее действие"
 )
 
 
@@ -32,7 +37,7 @@ async def cmd_start(message: Message, user: User | None) -> None:
     # Незнакомый — предлагаем запросить доступ.
     if user is None:
         await message.answer(
-            "👋 Здравствуйте! Это бот <b>PartsPrice Hub</b> — поиск автозапчастей по прайсам поставщиков.\n\n"
+            "👋 Здравствуйте! Это бот PartsPrice Hub — поиск автозапчастей по прайсам поставщиков.\n\n"
             "У вас пока нет доступа. Нажмите кнопку ниже, чтобы отправить заявку администратору.",
             reply_markup=request_access_keyboard(),
         )
@@ -48,7 +53,7 @@ async def cmd_start(message: Message, user: User | None) -> None:
     # Админ.
     if user.role == UserRole.admin:
         await message.answer(
-            "🛠 Здравствуйте, <b>администратор</b>!\n\n"
+            "🛠 Здравствуйте, администратор!\n\n"
             "Доступные команды:\n"
             f"{_ADMIN_COMMANDS}"
         )
@@ -57,6 +62,6 @@ async def cmd_start(message: Message, user: User | None) -> None:
     # Менеджер (единственная оставшаяся роль).
     await message.answer(
         "✅ Здравствуйте! Доступ менеджера подтверждён.\n\n"
-        "Доступные команды:\n"
+        "Как искать:\n"
         f"{_MANAGER_COMMANDS}"
     )

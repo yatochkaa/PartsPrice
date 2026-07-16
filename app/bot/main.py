@@ -14,7 +14,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from app.bot.handlers import access, admin, start
+from app.bot.handlers import access, admin, search, start, suppliers
 from app.bot.middlewares import DbSessionMiddleware, UserRoleMiddleware
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
@@ -33,6 +33,7 @@ def _setup_logging() -> None:
 
 def _build_dispatcher() -> Dispatcher:
     """Собирает Dispatcher: middleware + роутеры."""
+    # Dispatcher по умолчанию использует MemoryStorage — его достаточно для FSM.
     dp = Dispatcher()
 
     # Middleware на весь поток апдейтов. Порядок важен:
@@ -41,9 +42,13 @@ def _build_dispatcher() -> Dispatcher:
     dp.update.outer_middleware(UserRoleMiddleware())
 
     # Роутеры по областям ответственности.
+    # ВАЖНО: search подключается ПОСЛЕДНИМ — он ловит «любой текст»,
+    # и должен получать сообщение только если команды выше не подошли.
     dp.include_router(start.router)
     dp.include_router(access.router)
     dp.include_router(admin.router)
+    dp.include_router(suppliers.router)
+    dp.include_router(search.router)
 
     return dp
 

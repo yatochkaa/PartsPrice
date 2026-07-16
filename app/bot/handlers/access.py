@@ -114,6 +114,14 @@ async def approve_request(
         await callback.answer("Пользователь не найден.", show_alert=True)
         return
 
+    # Защита от повторного нажатия «Одобрить» на старом сообщении.
+    if target.role != UserRole.pending:
+        await callback.answer(
+            f"У пользователя уже есть доступ (роль: {target.role.value}).",
+            show_alert=True,
+        )
+        return
+
     target.role = UserRole.manager
     await session.commit()
 
@@ -147,6 +155,15 @@ async def reject_request(
     target = await _get_user(session, target_id)
     if target is None:
         await callback.answer("Пользователь не найден.", show_alert=True)
+        return
+
+    # Защита от нажатия «Отклонить» на старом сообщении:
+    # иначе можно случайно удалить уже одобренного менеджера.
+    if target.role != UserRole.pending:
+        await callback.answer(
+            "У пользователя уже есть доступ — отклонять нечего.",
+            show_alert=True,
+        )
         return
 
     await session.delete(target)
