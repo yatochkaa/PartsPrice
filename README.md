@@ -2,7 +2,7 @@
 
 **Агрегатор прайс-листов поставщиков автозапчастей: загружает CSV/Excel, приводит артикулы и цены к единому виду и позволяет искать предложения через Telegram-бота и REST API.**
 
-<!-- GIF -->
+![Демо поиска в Telegram](docs/images/demo.gif)
 
 ## Проблема и решение
 
@@ -30,15 +30,16 @@
 
 ### Карточка поиска в Telegram
 
-<!-- SCREENSHOT: карточка поиска -->
+![Карточка поиска в Telegram](docs/images/search-card.png)
 
 ### Swagger UI
 
-<!-- SCREENSHOT: Swagger -->
+<!-- Добавьте реальный скрин Swagger: docs/images/swagger.png -->
+![Swagger UI](docs/images/swagger.png)
 
 ### Отчёт загрузки прайс-листа
 
-<!-- SCREENSHOT: отчёт загрузки -->
+![Отчёт загрузки прайс-листа](docs/images/upload-report.png)
 
 ## Архитектура
 
