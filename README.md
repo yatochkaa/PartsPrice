@@ -34,7 +34,6 @@
 
 ### Swagger UI
 
-<!-- Добавьте реальный скрин Swagger: docs/images/swagger.png -->
 ![Swagger UI](docs/images/swagger.png)
 
 ### Отчёт загрузки прайс-листа
@@ -94,7 +93,47 @@ docker compose exec api python -m scripts.seed
 - проверка API: `http://localhost:8000/health`;
 - логи: `docker compose logs -f api bot`.
 
-> Для REST-запросов к защищённым маршрутам передайте заголовок `X-API-Key`. Для административных операций также используется роль администратора.
+> Для REST-запросов к защищённым маршрутам передайте заголовок `X-API-Key`. Для административных операций также используется роль администратора — подробнее в разделе [Модель доступа](#модель-доступа).
+
+## Локальный запуск (без Docker)
+
+Понадобится Python 3.12+.
+
+```bash
+# 1. Клонировать и перейти в каталог
+git clone https://github.com/yatochkaa/PartsPrice.git
+cd PartsPrice
+
+# 2. Создать и активировать виртуальное окружение
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 3. Установить зависимости
+pip install -r requirements.txt
+
+# 4. Подготовить .env
+cp .env.example .env
+# заполнить BOT_TOKEN, API_SECRET, ADMIN_TELEGRAM_ID
+
+# 5. (необязательно) Проверить конфигурацию
+python -m scripts.check_setup
+
+# 6. Применить миграции и загрузить примеры
+alembic upgrade head
+python -m scripts.seed
+
+# 7. Запустить REST API
+uvicorn app.api.main:app --reload
+
+# 8. В отдельном терминале — Telegram-бота
+python -m app.bot.main
+```
+
+Тесты:
+
+```bash
+pytest -q
+```
 
 ## Технические решения
 
@@ -141,6 +180,18 @@ DATABASE_URL=postgresql+asyncpg://user:password@db:5432/partsprice
 - `GET /uploads/{upload_id}` — получение сводки загрузки.
 
 Полное интерактивное описание доступно в Swagger UI по адресу `/docs`.
+
+### Модель доступа
+
+Авторизация REST API — по статичному ключу в заголовке `X-API-Key` (сравнение за постоянное время через `secrets.compare_digest`).
+
+- `require_manager` — любой владелец валидного ключа (доступ на чтение/поиск);
+- `require_admin` — админский доступ (загрузка данных и т.п.).
+
+Поддерживаются два режима админ-доступа:
+
+1. **По умолчанию (общий ключ + заголовок роли).** Если `ADMIN_API_SECRET` не задан, админом считается владелец общего `API_SECRET`, дополнительно приславший заголовок `X-Role: admin`. Это осознанное упрощение для учебного проекта: разделения секретов между ролями нет, клиент фактически сам объявляет себя админом.
+2. **Раздельные секреты (рекомендуется для «боевого» варианта).** Если задать `ADMIN_API_SECRET`, админом считается только владелец этого отдельного ключа (`X-API-Key: <ADMIN_API_SECRET>`), а связка «общий ключ + X-Role: admin» админ-доступа больше не даёт.
 
 ## Тесты
 

@@ -1,8 +1,8 @@
 """Настройки приложения.
 
 Читаем переменные окружения и файл .env через pydantic-settings.
-Здесь только поля из ТЕХСПЕЦ (.env): BOT_TOKEN, DATABASE_URL, API_SECRET,
-ADMIN_TELEGRAM_ID, LOG_LEVEL.
+Поля из ТЕХСПЕЦ (.env): BOT_TOKEN, DATABASE_URL, API_SECRET,
+ADMIN_TELEGRAM_ID, LOG_LEVEL, а также необязательный ADMIN_API_SECRET.
 
 ВАЖНО: именно этот вариант (единый объект `settings` с полями в верхнем
 регистре) импортируют app/db/session.py и app/api/main.py — менять имя
@@ -27,6 +27,12 @@ class Settings(BaseSettings):
 
     # Секрет для доступа к REST API (используется на этапе авторизации в deps.py).
     API_SECRET: str = ""
+
+    # (Необязательно) Отдельный секрет для админских операций.
+    # Если задан — админом считается только владелец этого ключа, а связка
+    # «общий API_SECRET + X-Role: admin» админ-доступа больше не даёт.
+    # Если пусто — сохраняется прежнее (упрощённое) поведение с X-Role.
+    ADMIN_API_SECRET: str = ""
 
     # Telegram ID администратора — из него seed создаёт пользователя-админа.
     ADMIN_TELEGRAM_ID: int = 0
